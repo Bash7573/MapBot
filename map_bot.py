@@ -16,18 +16,62 @@ CHANNEL_ID = redacted_channel_id #Map Bot
 
 bot = commands.Bot(command_prefix="m", intents=discord.Intents.all())
 
+ 
+
+
+@dataclass
+class MapNameData:
+    """
+    Stores the name of the maps
+    """
+
+    map_names = ["antarctic-peninsula",
+                 "busan",
+                 "ilios",
+                 "lijang-tower",
+                 "nepal",
+                 "oasis",
+                 "samoa",
+                 "circuit-royale",
+                 "dorado",
+                 "havana",
+                 "junkertown", 
+                 "rialto",
+                 "route-66",
+                 "shambali-monastery",
+                 "watchpoint-gibraltar",
+                 "new-junk-city",
+                 "suravasa",
+                 "blizzard-world",
+                 "eichenwalde",
+                 "hollywood",
+                 "kings-row",
+                 "midtown",
+                 "numbani",
+                 "paraiso",
+                 "colosseo",
+                 "esperanca",
+                 "new-queen-street",
+                 "runasapi",
+                 "hanaoka",
+                 "throne-of-anubis"]
+    
+
 @dataclass
 class BotData:
     """
     General Data the bot keeps tracks of in a session.
     """
-    bot_commands = ["madd [name-of-map] [won (True/False)]",
-                    "mcmds",]    
+    bot_commands = ["madd [name-of-map] [result (0:Loss, 1: Win, 2: Draw)]",
+                    "mwinrate [name-of-map]",
+                    "mlastwon [name-of-map]",
+                    "mlast10",
+                    "mmaps"]   
 
 
 # Instatiate data classes
 bot_data = BotData()
-
+map_name_data = MapNameData()
 
 # Bot Behaviour
 
@@ -37,9 +81,11 @@ async def on_ready():
     Functionaliy when bot activated
     """
     channel = bot.get_channel(CHANNEL_ID)
-    msg = "\n===MAP BOT RUNNING==="
-
+    msg = "\nMAP BOT RUNNING\n"
+    instr = "\n Information on how to use the bot can be found by typing in 'mcmds'"
+    
     await channel.send(msg)
+    await channel.send(instr)
 
 
 @bot.command()
@@ -68,6 +114,40 @@ async def add(ctx, map_name: str, result: bool):
 
 
 @bot.command()
+async def lastwon(ctx, map_name: str):
+    """
+    Fetches the last time you won the specified map.
+    """
+    cur_time = time.time()
+    curf_time = datetime.fromtimestamp(cur_time).strftime("%Y-%m-%d %H:%M:%S")
+    cur_time_obj = datetime.strptime(curf_time, "%Y-%m-%d %H:%M:%S")
+
+    query = f"SELECT MAX(timestamp) FROM maps WHERE map_name = '{map_name}' AND result = 1"
+    connection = sqlite3.connect(redacted_db_path)
+    cursor = connection.cursor()
+
+    try:
+        cursor.execute(query)
+        last_time = cursor.fetchone()[0]
+
+        if last_time != None:
+
+            last_time_obj = datetime.strptime(last_time, "%Y-%m-%d %H:%M:%S")
+            elapsed_time = cur_time_obj - last_time_obj
+            days = elapsed_time.days
+            hours, remainder = divmod(elapsed_time.seconds, 3600)
+            minutes, seconds = divmod(remainder, 60)
+            await ctx.send(f"Time Elapsed since last win on {map_name}: {days} days, {hours} hours, {minutes} minutes, {seconds} seconds")
+        else:
+            await ctx.send(f"No recorded win in database")
+
+    except Exception as e:
+        await ctx.send(f"An error occurred: {e}")
+    finally:
+        connection.close()
+
+
+@bot.command()
 async def winrate(ctx, map_name :str):
     """
     Fetches winrate for a given map
@@ -88,7 +168,7 @@ async def winrate(ctx, map_name :str):
         cursor.execute(query2)
         total = cursor.fetchone()
         wrate = round((int(won[0]) / int(total[0]) * 100), 2)
-        await ctx.send(f"{wrate}%")
+        await ctx.send(f"{wrate}% - {total[0]} maps played")
     except Exception as e:
         await ctx.send(f"An error occured: {e}")
     finally:
@@ -96,12 +176,60 @@ async def winrate(ctx, map_name :str):
 
 
 @bot.command()
+async def maps(ctx):
+    """
+    Shows the possible maps to enter intot the database
+    """
+    await ctx.send("Trackable Maps")
+    await ctx.send("\n".join(map_name_data.map_names))
+
+@bot.command()
 async def cmds(ctx):
     """
-    Function that will print commands
+    Prints list of bots commands
     """
-    cmds = "\n".join(bot_data.bot_commands)
-    await ctx.send("=== Commands ===\n" + cmds)
+    await ctx.send("=== Commands ===") 
+    await ctx.send("\n".join(bot_data.bot_commands))
+
+
+
+@bot.command()
+async def last10 (ctx): 
+    """
+    Last 10 Results
+    """
+    query = f"SELECT map_name, result, timestamp FROM maps ORDER BY timestamp DESC LIMIT 10"
+    
+    connection = sqlite3.connect(redacted_db_path)
+    cursor = connection.cursor()
+
+    try:
+        cursor.execute(query)
+        result = cursor.fetchall()
+        msg = ""
+        
+        for i in result:
+            
+            line = ""
+            if i[1] == 0:
+                line += "❌ loss "
+            elif i[1] == 1:
+                line += "✅ win "
+            elif i[1] == 2:
+                line += "draw"
+
+            line += i[0].strip()
+
+            line += f" {i[2]}"
+            msg += f"{line}\n"
+
+        await ctx.send(msg)
+
+    except Exception as e:
+        await ctx.send(f"An error occurred: {e}")
+
+    finally:
+        connection.close()
 
 
 @bot.command()
@@ -110,7 +238,6 @@ async def stop(ctx):
     """
     Powers off the bot
     """
-
     await ctx.send("Bot is shutting down")
     await bot.close() # CLose port to bot
 

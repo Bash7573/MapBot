@@ -2,16 +2,20 @@ import sqlite3
 import discord
 import datetime
 import time
+import os
 
+from dotenv import load_dotenv
 from datetime import datetime
 from discord.ext import commands
 from dataclasses import dataclass
 
 # IMPORTANT CONSTATNTS
 
-BOT_TOKEN = redacted_token
-CHANNEL_ID = redacted_channel_id #Map Bot Channel 
-DB_PATH = redacted_db_path
+load_dotenv()
+
+BOT_TOKEN = os.getenv("TOKEN")
+CHANNEL_ID = int(os.getenv("ID"))
+DB_PATH = os.getenv("DB")
 
 # DISCORD BOT
 

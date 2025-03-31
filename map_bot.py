@@ -186,7 +186,7 @@ async def bestmaps(ctx):
     "SUM(CASE WHEN result = 1 THEN 1 ELSE 0 END) AS total_wins," \
     "SUM(CASE WHEN result = 2 THEN 1 ElSE 0 END) AS total_draws," \
     "(CAST(SUM(CASE WHEN result = 1 THEN 1 ELSE 0 END) AS FLOAT) / COUNT(*) * 100) AS win_rate" \
-    " FROM maps GROUP BY map_name ORDER BY win_rate DESC LIMIT 10"
+    " FROM maps GROUP BY map_name ORDER BY win_rate DESC, total_wins DESC LIMIT 10"
     connection = sqlite3.connect(DB_PATH)
     cursor = connection.cursor()
 
@@ -301,12 +301,37 @@ async def last10 (ctx):
 
 
 @bot.command()
+async def mostplayed(ctx):
+    """
+    Shows most played maps
+    """
+
+    query = f"SELECT map_name, count(*) FROM maps group by map_name order by count(*) DESC"
+    connection = sqlite3.connect(DB_PATH)
+    cursor = connection.cursor()
+
+    try:
+        cursor.execute(query)
+        result = cursor.fetchall()
+        msg = "=== Most Played Maps\n"
+
+        for i in result:
+            msg += f"{i[0]}: {i[1]} times\n"
+
+        await ctx.send(msg)
+    except Exception as e:
+        await ctx.send(f"An error occurred: {e}")
+    finally:
+        connection.close()
+
+
+@bot.command()
 @commands.is_owner()
 async def stop(ctx):
     """
     Powers off the bot
     """
     await ctx.send("Bot is shutting down")
-    await bot.close() # CLose port to bot
+    await bot.close() # Close port to bot
 
 bot.run(BOT_TOKEN)

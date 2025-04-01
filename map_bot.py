@@ -64,10 +64,13 @@ class BotData:
     """
     General Data the bot keeps tracks of in a session.
     """
-    bot_commands = ["madd [name-of-map] [result (0:Loss, 1: Win, 2: Draw)]",
+    bot_commands = ["madd [name-of-map] [result]",
                     "mwinrate [name-of-map]",
                     "mlastwon [name-of-map]",
                     "mlast10",
+                    "mbestmaps",
+                    "mworstmaps",
+                    "mmostplayed",
                     "mmaps"]   
 
 
@@ -305,7 +308,6 @@ async def mostplayed(ctx):
     """
     Shows most played maps
     """
-
     query = f"SELECT map_name, count(*) FROM maps group by map_name order by count(*) DESC"
     connection = sqlite3.connect(DB_PATH)
     cursor = connection.cursor()

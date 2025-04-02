@@ -64,9 +64,10 @@ class BotData:
     """
     General Data the bot keeps tracks of in a session.
     """
-    bot_commands = ["madd [name-of-map] [result]",
-                    "mwinrate [name-of-map]",
-                    "mlastwon [name-of-map]",
+    bot_commands = ["madd [map-name] [result]",
+                    "mwinrate [map-map]",
+                    "mlastwon [map-name]",
+                    "mlastplayed [map_name]",
                     "mlast10",
                     "mbestmaps",
                     "mworstmaps",
@@ -321,6 +322,40 @@ async def mostplayed(ctx):
             msg += f"{i[0]}: {i[1]} times\n"
 
         await ctx.send(msg)
+    except Exception as e:
+        await ctx.send(f"An error occurred: {e}")
+    finally:
+        connection.close()
+
+
+@bot.command()
+async def lastplayed(ctx, map_name):
+    """
+    Shows the last time we got the map
+    """
+    cur_time = time.time()
+    curf_time = datetime.fromtimestamp(cur_time).strftime("%Y-%m-%d %H:%M:%S")
+    cur_time_obj = datetime.strptime(curf_time, "%Y-%m-%d %H:%M:%S")
+
+    query = f"SELECT MAX(timestamp) FROM maps WHERE map_name = '{map_name}'"
+    connection = sqlite3.connect(DB_PATH)
+    cursor = connection.cursor()
+
+    try:
+        cursor.execute(query)
+        last_time = cursor.fetchone()[0]
+
+        if last_time != None:
+
+            last_time_obj = datetime.strptime(last_time, "%Y-%m-%d %H:%M:%S")
+            elapsed_time = cur_time_obj - last_time_obj
+            days = elapsed_time.days
+            hours, remainder = divmod(elapsed_time.seconds, 3600)
+            minutes, seconds = divmod(remainder, 60)
+            await ctx.send(f"Last played {map_name}: {days} days, {hours} hours, {minutes} minutes, {seconds} seconds ago")
+        else:
+            await ctx.send("Have not played this map.")
+
     except Exception as e:
         await ctx.send(f"An error occurred: {e}")
     finally:

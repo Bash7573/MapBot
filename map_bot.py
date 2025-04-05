@@ -248,24 +248,6 @@ async def worstmaps(ctx):
 
 
 @bot.command()
-async def maps(ctx):
-    """
-    Shows the possible maps to enter intot the database
-    """
-    await ctx.send("Trackable Maps")
-    await ctx.send("\n".join(map_name_data.map_names))
-
-@bot.command()
-async def cmds(ctx):
-    """
-    Prints list of bots commands
-    """
-    await ctx.send("=== Commands ===") 
-    await ctx.send("\n".join(bot_data.bot_commands))
-
-
-
-@bot.command()
 async def last10 (ctx): 
     """
     Last 10 Results
@@ -291,7 +273,6 @@ async def last10 (ctx):
                 line += "draw"
 
             line += i[0].strip()
-
             line += f" {i[2]}"
             msg += f"{line}\n"
 
@@ -360,6 +341,43 @@ async def lastplayed(ctx, map_name):
         await ctx.send(f"An error occurred: {e}")
     finally:
         connection.close()
+
+
+@bot.command()
+async def notsure(ctx):
+    """
+    """
+    query = "SELECT * FROM maps WHERE strftime('%H:%M:%d', timestamp) BETWEEN '20:00:00' and '23:59:59' AND result = 1"
+    
+    connection = sqlite3.connect(DB_PATH)
+    cursor = connection.cursor()
+
+    try:
+        cursor.execute(query)
+        result = cursor.fetchone()
+        await ctx.send(result)
+    except Exception as e:
+        await ctx.send(f"An error occurred: {e}")
+    finally:
+        connection.close()
+
+
+@bot.command()
+async def maps(ctx):
+    """
+    Shows the possible maps to enter intot the database
+    """
+    await ctx.send("Trackable Maps")
+    await ctx.send("\n".join(map_name_data.map_names))
+
+
+@bot.command()
+async def cmds(ctx):
+    """
+    Prints list of bots commands
+    """
+    await ctx.send("=== Commands ===") 
+    await ctx.send("\n".join(bot_data.bot_commands))
 
 
 @bot.command()

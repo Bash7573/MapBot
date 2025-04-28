@@ -195,6 +195,50 @@ async def add(ctx, map_name: str, map_result: str, season='s16', stack=None):
 
 
 @bot.command()
+async def bestmaptype(ctx, season):
+    """
+    """
+   
+    query =  "SELECT " \
+    "mr.map_type, " \
+    "om.season, " \
+    "COUNT(*) AS total_games, " \
+    "SUM(CASE WHEN om.map_result = 'w' THEN 1 ELSE 0 END) AS total_wins, " \
+    "SUM(CASE WHEN om.map_result = 'l' THEN 1 ELSE 0 END) AS total_losses, " \
+    "SUM(CASE WHEN om.map_result = 'd' THEN 1 ELSE 0 END) AS total_draws, " \
+    "(CAST(SUM(CASE WHEN om.map_result = 'w' THEN 1 ELSE 0 END) AS FLOAT) / " \
+    "NULLIF(SUM(CASE WHEN om.map_result IN ('w', 'l', 'd') THEN 1 ELSE 0 END), 0) * 100) AS win_rate " \
+    "FROM owmaps om " \
+    "JOIN map_ref mr ON om.map_name = mr.map_name " \
+    f"WHERE om.season IN ('{season}') " \
+    "GROUP BY mr.map_type " \
+    "ORDER BY win_rate DESC"
+
+
+    connection = sqlite3.connect(DB_PATH)
+    cursor = connection.cursor()
+    
+    try:
+        cursor.execute(query)
+        result = cursor.fetchall()
+
+        parsed_result = f"=== BEST MAP TYPES - {season} ===\n"
+        
+        for i in result:
+            type = i[0].strip()
+            winrate = round(i[6], 2)
+            record = f"{i[3]}W {i[4]}L {i[5]}D"
+            parsed_result += type + " - " + str(winrate)+"%" + " - " + record + "\n"
+
+        await ctx.send(parsed_result)
+
+    except Exception as e:
+        await ctx.send(f"An error occurred: {e}")
+    finally:
+        connection.close()
+
+
+@bot.command()
 async def lastwon(ctx, map_name: str):
     """
     Fetches the last time you won the specified map.
@@ -231,11 +275,11 @@ async def lastwon(ctx, map_name: str):
 
 
 @bot.command()
-async def personal_wr(ctx, name):
+async def personal_wr(ctx, name, season):
     """
     """
-    query = f"SELECT COUNT (*) FROM owmaps WHERE stack LIKE '%{name}%' AND map_result = 'w'"
-    query2 = f"SELECT COUNT (*) FROM owmaps WHERE stack LIKE '%{name}%'"
+    query = f"SELECT COUNT (*) FROM owmaps WHERE stack LIKE '%{name}%' AND map_result = 'w' AND season = '{season}'"
+    query2 = f"SELECT COUNT (*) FROM owmaps WHERE stack LIKE '%{name}%' AND season = '{season}'"
 
     connection = sqlite3.connect(DB_PATH)
     cursor = connection.cursor()
@@ -253,6 +297,18 @@ async def personal_wr(ctx, name):
         await ctx.send(f"An error occurred: {e}")
     finally:
         connection.close()
+
+
+@bot.command()
+async def group_stats(ctx):
+
+
+    connection = sqlite3.connect(DB_PATH)
+    cursor = connection.cursor()
+
+    group_memebers = ["W", "L", "D", "E", "C", "J"]
+
+    res_string = ""
 
 
 @bot.command()

@@ -300,15 +300,34 @@ async def personal_wr(ctx, name, season):
 
 
 @bot.command()
-async def group_stats(ctx):
+async def group_stats(ctx, season):
 
+
+    group_memebers = {"W":"Will", "L":"Liam", "D":"Dan", "E":"Ewan", "C":"Chelsea", "J":"Justin"}
+    res_string = "=== Season 16 Group Stats ===\n"
+
+    gstats = []
 
     connection = sqlite3.connect(DB_PATH)
     cursor = connection.cursor()
 
-    group_memebers = ["W", "L", "D", "E", "C", "J"]
+    for name in group_memebers.keys():
 
-    res_string = ""
+        query = "SELECT COUNT(*) AS total_games, " \
+        "(CAST(SUM(CASE WHEN map_result = 'w' THEN 1 ELSE 0 END) AS FLOAT) / " \
+        "NULLIF(SUM(CASE WHEN map_result IN ('w', 'l', 'd') THEN 1 ELSE 0 END), 0) * 100) AS win_rate " \
+        f"FROM owmaps WHERE stack LIKE '%{name}%' AND season = '{season}'"
+
+        cursor.execute(query)
+        stats = cursor.fetchall()
+        gstats.append({"name": name, "games": stats[0][0], "win-rate": stats[0][1]})
+
+    gstats.sort(key=lambda x: x["win-rate"])
+    
+    for i in range(len(gstats) - 1, -1, -1) :
+        res_string += f"{group_memebers[gstats[i]["name"]]} - {gstats[i]["games"]} Games Played - {round(gstats[i]["win-rate"], 2)}% win rate\n"
+
+    await ctx.send(res_string)
 
 
 @bot.command()
